@@ -1,0 +1,20 @@
+groups:
+- name: celery-alerts
+  rules:
+  - alert: HighTaskFailureRate
+    expr: rate(tasks_failed_total[5m]) / rate(tasks_started_total[5m]) > 0.1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High task failure rate ({{ $value }})"
+      description: "Task failure rate exceeded 10% for 5 minutes"
+
+  - alert: LongRunningTasks
+    expr: histogram_quantile(0.95, sum(rate(task_duration_seconds_bucket[5m])) by (le)) > 10
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Long running tasks detected (P95 > 10s)"
+      description: "95th percentile task duration exceeds 10 seconds"

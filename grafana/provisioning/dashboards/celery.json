@@ -1,0 +1,110 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Celery Monitoring",
+    "panels": [
+      {
+        "type": "graph",
+        "title": "Task Throughput",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(tasks_started_total[5m])",
+            "legendFormat": "Started",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(tasks_completed_total[5m])",
+            "legendFormat": "Completed",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(tasks_failed_total[5m])",
+            "legendFormat": "Failed",
+            "refId": "C"
+          }
+        ]
+      },
+      {
+        "type": "graph",
+        "title": "Task Duration (P95)",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(task_duration_seconds_bucket[5m])) by (le, task_name))",
+            "legendFormat": "{{task_name}}",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "type": "stat",
+        "title": "Current Queue Size",
+        "gridPos": {"x": 0, "y": 8, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "celery_queue_length",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "type": "piechart",
+        "title": "Task Status Distribution",
+        "gridPos": {"x": 6, "y": 8, "w": 6, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(tasks_completed_total) by (task_name)",
+            "legendFormat": "Completed {{task_name}}",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(tasks_failed_total) by (task_name)",
+            "legendFormat": "Failed {{task_name}}",
+            "refId": "B"
+          }
+        ]
+      }, {
+        "id": 6,
+        "title": "Flower: Worker 状态",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 22, "w": 12, "h": 8},
+        "targets": [{
+          "expr": "flower_worker_online",
+          "format": "table",
+          "refId": "A"
+        }],
+        "columns": [
+          {"text": "Worker", "value": "instance"},
+          {"text": "状态", "value": "value", "mapping": {
+            "1": "在线",
+            "0": "离线"
+          }}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Flower: 任务统计",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 22, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "sum(flower_task_received_total)",
+            "legendFormat": "总任务数",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(flower_task_succeeded_total)",
+            "legendFormat": "成功任务",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(flower_task_failed_total)",
+            "legendFormat": "失败任务",
+            "refId": "C"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  - job_name: 'django'
+    static_configs:
+      - targets: ['backend:8000']  # Django metrics
+
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['celery-worker:9809']  # Celery worker metrics
+
+  - job_name: 'celery1'
+    static_configs:
+      - targets: ['celery-worker1:9801']  # Celery worker metrics
+
+  - job_name: 'celery2'
+    static_configs:
+      - targets: ['celery-worker2:9802']  # Celery worker metrics
+
+  - job_name: 'celery3'
+    static_configs:
+      - targets: ['celery-worker3:9803']  # Celery worker metrics
+  
+  - job_name: 'celery-exporter'
+    static_configs:
+      - targets: ['celery-exporter:9808']  # Celery worker metrics
+
+  - job_name: 'flower'
+    static_configs:
+      - targets: ['flower:5555']  # Flower metrics

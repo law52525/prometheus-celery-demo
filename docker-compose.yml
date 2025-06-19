@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+  
+  backend:
+    build: ./backend
+    command: gunicorn demo.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      DJANERY_RESULT_BACKEND: redis://redis:6379/1
+    depends_on:
+      - redis
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  celery-worker:
+    build: ./backend
+    command: celery -A celery_app:app worker -l info --pool=gevent
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=demo.settings
+      - METRICS_PORT=9809
+    ports:
+      - "9809:9809"  # Expose Celery metrics port
+    depends_on:
+      - redis
+      - backend
+
+  celery-worker1:
+    build: ./backend
+    command: celery -A celery_app:app worker -l info -Q celery-worker1 --pool=gevent
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=demo.settings
+      - METRICS_PORT=9801
+    ports:
+      - "9801:9801"
+  
+  celery-worker2:
+    build: ./backend
+    command: celery -A celery_app:app worker -l info -Q celery-worker2 --pool=gevent
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=demo.settings
+      - METRICS_PORT=9802
+    ports:
+      - "9802:9802"
+  
+  celery-worker3:
+    build: ./backend
+    command: celery -A celery_app:app worker -l info -Q celery-worker3 --pool=gevent
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=demo.settings
+      - METRICS_PORT=9803
+    ports:
+      - "9803:9803"
+
+  celery-beat:
+    build: ./backend
+    command: celery -A celery_app:app beat -l info
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      DJANGO_SETTINGS_MODULE: demo.settings
+      METRICS_PORT: 9804
+    depends_on:
+      - redis
+      - backend
+
+  flower:
+    build: ./backend
+    command: celery -A celery_app:app flower --port=5555
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DJANGO_SETTINGS_MODULE=demo.settings
+      - METRICS_PORT=9808
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  celery-exporter:
+    image: danihodovic/celery-exporter:0.12.0
+    environment:
+      CE_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      DJANERY_RESULT_BACKEND: redis://redis:6379/1
+    ports:
+      - "9808:9808"
